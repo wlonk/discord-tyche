@@ -1,0 +1,26 @@
+; Discord Bot systemd service unit file
+; Place in e.g. `/etc/systemd/system/discord-tyche.service`, then
+; `systemctl daemon-reload` and `service discord-tyche start`.
+
+[Unit]
+Description=Tyche
+Requires=network.target
+After=network.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+
+; Create a user for this bot, and set the working dir and user appropriately:
+WorkingDirectory=/home/tyche
+User=tyche
+
+; Set the Discord Token:
+Environment=DISCORD_TOKEN='SET ME PLEEEEEASE'
+
+; Set the correct path to a virtualenv Python with the requirements installed:
+ExecStart=python3.6 tyche.py
