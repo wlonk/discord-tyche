@@ -5,10 +5,12 @@ from discord.ext.commands import Bot
 
 from .errors import ParseError
 from .generic import Generic
+from .wod import WoD
 
 
 BACKENDS = [
     Generic(),
+    WoD(),
 ]
 
 

@@ -5,10 +5,10 @@ from .errors import ParseError
 
 
 class Generic(Base):
-    BASIC_DICE = re.compile(r'(\d+)?d(\d+)(?:\s*([+-])\s*(\d+))?')
+    DICE = re.compile(r'(\d+)?d(\d+)(?:\s*([+-])\s*(\d+))?')
 
     def parse(self, dice):
-        groups = self.BASIC_DICE.match(dice)
+        groups = self.DICE.match(dice)
         if not groups:
             raise ParseError(f"Invalid dice: {dice}")
         try:
