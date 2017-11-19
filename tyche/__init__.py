@@ -6,11 +6,13 @@ from discord.ext.commands import Bot
 from .errors import ParseError
 from .generic import Generic
 from .wod import WoD
+from .pbta import PbtA
 
 
 BACKENDS = [
     Generic(),
     WoD(),
+    PbtA(),
 ]
 
 
@@ -39,6 +41,13 @@ async def on_ready():
 
 @client.command()
 async def roll(*dice):
+    """
+    Roll dice.
+
+    XdY(+/-Z)  generic dice roller
+    X(eY)(r)   Chronicles of Darkness roller
+    +/-X       Powered by the Apocalypse roller
+    """
     result = ''
     for backend in BACKENDS:
         try:
