@@ -1,4 +1,5 @@
 import os
+import asyncio
 
 from random import choice
 
@@ -9,6 +10,12 @@ from .errors import ParseError
 from .generic import Generic
 from .wod import WoD
 from .pbta import PbtA
+
+
+if not discord.opus.is_loaded():
+    # Default on OS X installed by brew install opus
+    default = '/usr/local/Cellar/opus/1.2.1/lib/libopus.dylib'
+    discord.opus.load_opus(os.environ.get('DISCORD_TOKEN', default))
 
 
 BACKENDS = [
@@ -26,6 +33,12 @@ AFFIRMATIVES = [
     "I'll try my best.",
     "UGH. Fine.",
     "Yessiree!"
+]
+
+NEGATIVES = [
+    "I can't do that, Dave.",
+    "Nah.",
+    "Pffff. No.",
 ]
 
 # These should be configurable, not hard-coded:
@@ -76,30 +89,78 @@ def is_acceptable(role_name, context):
         return None
 
 
-@client.event
-async def on_command(command, context):
-    if command.name == 'role' or command.name == 'unrole':
-        behavior = {
-            'role': 'add_roles',
-            'unrole': 'remove_roles',
-        }[command.name]
-        role_name = parse_message(context.message.clean_content)
-        role = is_acceptable(role_name, context)
-        if role:
-            await getattr(client, behavior)(
-                context.message.author,
-                role,
-            )
+
+VOICE_CHANNELS = {}
 
 
-@client.command()
-async def role(desired_role):
+@client.command(pass_context=True)
+async def play(ctx, url):
     await client.say(choice(AFFIRMATIVES))
+    channel = ctx.message.author.voice.voice_channel
+    if channel:
+        voice = await client.join_voice_channel(channel)
+        player = await voice.create_ytdl_player(url)
+        VOICE_CHANNELS[channel.id] = player
+        player.volume = 0.1
+        player.start()
 
 
-@client.command()
-async def unrole(desired_role):
+@client.command(pass_context=True)
+async def pause(ctx):
+    channel = ctx.message.author.voice.voice_channel
+    if channel:
+        player = VOICE_CHANNELS.get(channel.id)
+        if player:
+            await client.say(choice(AFFIRMATIVES))
+            player.pause()
+        else:
+            await client.say(choice(NEGATIVES))
+
+
+@client.command(pass_context=True)
+async def resume(ctx):
     await client.say(choice(AFFIRMATIVES))
+    channel = ctx.message.author.voice.voice_channel
+    if channel:
+        player = VOICE_CHANNELS.get(channel.id)
+        if player:
+            await client.say(choice(AFFIRMATIVES))
+            player.resume()
+        else:
+            await client.say(choice(NEGATIVES))
+
+
+@client.command(pass_context=True)
+async def stop(ctx):
+    await client.say(choice(AFFIRMATIVES))
+    channel = ctx.message.author.voice.voice_channel
+    if channel:
+        player = VOICE_CHANNELS.get(channel.id)
+        if player:
+            await client.say(choice(AFFIRMATIVES))
+            player.stop()
+        else:
+            await client.say(choice(NEGATIVES))
+
+
+@client.command(pass_context=True)
+async def role(ctx, desired_role):
+    role = is_acceptable(desired_role, ctx)
+    if role:
+        await client.say(choice(AFFIRMATIVES))
+        await client.add_roles(ctx.message.author, role)
+    else:
+        await client.say(choice(NEGATIVES))
+
+
+@client.command(pass_context=True)
+async def unrole(ctx, desired_role):
+    role = is_acceptable(desired_role, ctx)
+    if role:
+        await client.say(choice(AFFIRMATIVES))
+        await client.remove_roles(ctx.message.author, role)
+    else:
+        await client.say(choice(NEGATIVES))
 
 
 @client.command()
@@ -123,4 +184,7 @@ async def roll(*dice):
 
 
 def run():
-    client.run(os.environ['DISCORD_TOKEN'])
+    try:
+        client.run(os.environ['DISCORD_TOKEN'])
+    except:
+        asyncio.run(client.logout())
