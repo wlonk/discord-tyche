@@ -145,7 +145,7 @@ async def stop(ctx):
 async def vol(ctx, volume):
     channel = ctx.message.author.voice.voice_channel
     try:
-        volume = int(volume)
+        volume = float(volume)
     except ValueError:
         await client.say("That's not a number.")
         return
