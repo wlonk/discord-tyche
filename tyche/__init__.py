@@ -119,7 +119,6 @@ async def pause(ctx):
 
 @client.command(pass_context=True)
 async def resume(ctx):
-    await client.say(choice(AFFIRMATIVES))
     channel = ctx.message.author.voice.voice_channel
     if channel:
         player = VOICE_CHANNELS.get(channel.id)
@@ -132,13 +131,24 @@ async def resume(ctx):
 
 @client.command(pass_context=True)
 async def stop(ctx):
-    await client.say(choice(AFFIRMATIVES))
     channel = ctx.message.author.voice.voice_channel
     if channel:
         player = VOICE_CHANNELS.get(channel.id)
         if player:
             await client.say(choice(AFFIRMATIVES))
             player.stop()
+        else:
+            await client.say(choice(NEGATIVES))
+
+
+@client.command(pass_context=True)
+async def vol(ctx, volume):
+    channel = ctx.message.author.voice.voice_channel
+    if channel:
+        player = VOICE_CHANNELS.get(channel.id)
+        if player and 0.0 <= volume <= 2.0:
+            await client.say(choice(AFFIRMATIVES))
+            player.volume = volume
         else:
             await client.say(choice(NEGATIVES))
 
