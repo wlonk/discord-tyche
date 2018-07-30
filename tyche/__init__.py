@@ -144,6 +144,11 @@ async def stop(ctx):
 @client.command(pass_context=True)
 async def vol(ctx, volume):
     channel = ctx.message.author.voice.voice_channel
+    try:
+        volume = int(volume)
+    except ValueError:
+        await client.say("That's not a number.")
+        return
     if channel:
         player = VOICE_CHANNELS.get(channel.id)
         if player and 0.0 <= volume <= 2.0:
