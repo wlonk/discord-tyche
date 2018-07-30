@@ -184,7 +184,4 @@ async def roll(*dice):
 
 
 def run():
-    try:
-        client.run(os.environ['DISCORD_TOKEN'])
-    except:
-        asyncio.run(client.logout())
+    client.run(os.environ['DISCORD_TOKEN'])
