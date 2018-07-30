@@ -15,7 +15,7 @@ from .pbta import PbtA
 if not discord.opus.is_loaded():
     # Default on OS X installed by brew install opus
     default = '/usr/local/Cellar/opus/1.2.1/lib/libopus.dylib'
-    discord.opus.load_opus(os.environ.get('DISCORD_TOKEN', default))
+    discord.opus.load_opus(os.environ.get('LIBOPUS', default))
 
 
 BACKENDS = [
