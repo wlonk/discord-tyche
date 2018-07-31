@@ -159,6 +159,16 @@ async def vol(ctx, volume):
 
 
 @client.command(pass_context=True)
+async def leave(ctx):
+    channel = ctx.message.author.voice.voice_channel
+    if channel:
+        player = VOICE_CHANNELS.get(channel.id)
+        if player:
+            await client.voice.disconnect()
+            VOICE_CHANNELS.pop(channel.id)
+
+
+@client.command(pass_context=True)
 async def role(ctx, desired_role):
     role = is_acceptable(desired_role, ctx)
     if role:
