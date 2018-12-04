@@ -2,7 +2,8 @@ import asyncio
 import json
 import os
 from random import choice
-from contextlib import AsyncExitStack
+# When we're 3.7:
+# from contextlib import AsyncExitStack
 
 import aiohttp
 import discord
@@ -19,7 +20,7 @@ if not discord.opus.is_loaded():
     discord.opus.load_opus(os.environ.get("LIBOPUS", default))
 
 
-API_ROOT = "http://localhost:8000/api/"
+API_ROOT = os.environ.get("API_ROOT", "http://localhost:8000/api/")
 
 
 BACKENDS = [Generic(), WoD(), PbtA()]
@@ -49,12 +50,14 @@ VOICE_CHANNELS = {}
 
 
 async def fetch(url, server_id):
-    async with AsyncExitStack() as stack:
-        session = await stack.enter_async_context(aiohttp.ClientSession())
-        response = await stack.enter_async_context(
-            session.get(url, params={"server_id": server_id})
-        )
-        return await response.text()
+    # async with AsyncExitStack() as stack:
+    #     session = await stack.enter_async_context(aiohttp.ClientSession())
+    #     response = await stack.enter_async_context(
+    #         session.get(url, params={"server_id": server_id})
+    #     )
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, params={"server_id": server_id}) as response:
+            return await response.text()
 
 
 async def get_prefix(bot, message):

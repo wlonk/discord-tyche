@@ -23,4 +23,4 @@ User=tyche
 Environment=DISCORD_TOKEN='SET ME PLEEEEEASE'
 
 ; Set the correct path to a virtualenv Python with the requirements installed:
-ExecStart=python3.7 tyche.py
+ExecStart=/usr/local/bin/pipenv run python run.py
