@@ -56,19 +56,17 @@ async def fetch(url, server_id):
     #         session.get(url, params={"server_id": server_id})
     #     )
     async with aiohttp.ClientSession() as session:
-        async with session.get(url, params={"server_id": server_id}) as response:
+        async with session.get(f"{API_ROOT}{url}/", params={"server_id": server_id}) as response:
             return await response.text()
 
 
 async def get_prefix(bot, message):
-    payload = await fetch(f"{API_ROOT}prefix/", message.server.id)
+    payload = await fetch("prefix", message.server.id)
     return json.loads(payload)["prefix"]
 
 
 async def is_acceptable(role_name, context):
-    server_acceptable_roles = await fetch(
-        f"{API_ROOT}roles/", context.message.server.id
-    )
+    server_acceptable_roles = await fetch("roles", context.message.server.id)
     acceptable_roles = [
         r
         for r in context.message.server.role_hierarchy
@@ -93,6 +91,7 @@ async def on_ready():
         f"Logged in as {client.user.name} (ID:{client.user.id}) | "
         f"Connected to {str(len(client.servers))} servers"
     )
+    print(f"Communicating with {API_ROOT}")
     print("--------")
     print(f"Current Discord.py Version: {discord.__version__}")
     print("--------")
@@ -101,6 +100,35 @@ async def on_ready():
         f"https://discordapp.com/oauth2/authorize"
         f"?client_id={client.user.id}&scope=bot&permissions=8"
     )
+
+
+@client.event
+async def on_member_update(before, after):
+    response = await fetch("streaming_role", after.server.id)
+    response = json.loads(response)
+    streaming_role = response["streaming_role"]
+    streaming_role_requires = response["streaming_role_requires"]
+    if streaming_role:
+        avilable_roles = {
+            r.name: r
+            for r
+            in after.server.role_hierarchy
+        }
+        streaming_role = avilable_roles.get(streaming_role, None)
+        if not streaming_role:
+            # Bail early if role missing:
+            return
+        if (after.game and after.game.type != 1) or after.game is None:
+            await client.remove_roles(after, streaming_role)
+        user_roles = [
+            role.name
+            for role
+            in after.roles
+        ]
+        if streaming_role_requires and streaming_role_requires not in user_roles:
+            return
+        if after.game and after.game.type == 1:
+            await client.add_roles(after, streaming_role)
 
 
 @client.command(pass_context=True)
