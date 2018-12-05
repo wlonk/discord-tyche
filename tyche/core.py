@@ -141,6 +141,9 @@ async def on_member_update(before, after):
 
 @client.command(pass_context=True)
 async def play(ctx, url):
+    """
+    Play audio from the given YouTube URL in the current user's voice channel.
+    """
     await client.say(choice(AFFIRMATIVES))
     channel = ctx.message.author.voice.voice_channel
     if channel:
@@ -153,6 +156,9 @@ async def play(ctx, url):
 
 @client.command(pass_context=True)
 async def pause(ctx):
+    """
+    Pause playing audio in the current user's voice channel.
+    """
     channel = ctx.message.author.voice.voice_channel
     if channel:
         player = VOICE_CHANNELS.get(channel.id)
@@ -165,6 +171,9 @@ async def pause(ctx):
 
 @client.command(pass_context=True)
 async def resume(ctx):
+    """
+    Resume playing audio in the current user's voice channel.
+    """
     channel = ctx.message.author.voice.voice_channel
     if channel:
         player = VOICE_CHANNELS.get(channel.id)
@@ -177,6 +186,9 @@ async def resume(ctx):
 
 @client.command(pass_context=True)
 async def stop(ctx):
+    """
+    Stop playing audio in the current user's voice channel.
+    """
     channel = ctx.message.author.voice.voice_channel
     if channel:
         player = VOICE_CHANNELS.get(channel.id)
@@ -189,6 +201,10 @@ async def stop(ctx):
 
 @client.command(pass_context=True)
 async def vol(ctx, volume):
+    """
+    Adjust Tyche's volume in the current user's voice channel. Valid values are between
+    0.0 and 2.0, inclusive.
+    """
     channel = ctx.message.author.voice.voice_channel
     try:
         volume = float(volume)
@@ -206,6 +222,9 @@ async def vol(ctx, volume):
 
 @client.command(pass_context=True)
 async def leave(ctx):
+    """
+    Leave the current user's voice channel.
+    """
     channel = ctx.message.author.voice.voice_channel
     if channel:
         player = VOICE_CHANNELS.get(channel.id)
@@ -216,6 +235,9 @@ async def leave(ctx):
 
 @client.command(pass_context=True)
 async def role(ctx, desired_role):
+    """
+    Add a cosmetic role to the current user.
+    """
     role = await is_acceptable(desired_role, ctx)
     if role:
         await client.say(choice(AFFIRMATIVES))
@@ -226,6 +248,9 @@ async def role(ctx, desired_role):
 
 @client.command(pass_context=True)
 async def unrole(ctx, desired_role):
+    """
+    Remove a cosmetic role from the current user.
+    """
     role = await is_acceptable(desired_role, ctx)
     if role:
         await client.say(choice(AFFIRMATIVES))
