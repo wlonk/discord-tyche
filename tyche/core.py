@@ -21,6 +21,7 @@ if not discord.opus.is_loaded():
 
 
 API_ROOT = os.environ.get("API_ROOT", "http://localhost:8000/api/")
+API_KEY = os.environ.get("API_KEY", "invalid key")
 
 
 BACKENDS = [Generic(), WoD(), PbtA()]
@@ -55,8 +56,15 @@ async def fetch(url, server_id):
     #     response = await stack.enter_async_context(
     #         session.get(url, params={"server_id": server_id})
     #     )
+    headers = {
+        "Authorization": f"Token {API_KEY}",
+    }
+    params = {
+        "server_id": server_id,
+    }
+    full_url = f"{API_ROOT}{url}/"
     async with aiohttp.ClientSession() as session:
-        async with session.get(f"{API_ROOT}{url}/", params={"server_id": server_id}) as response:
+        async with session.get(full_url, headers=headers, params=params) as response:
             return await response.text()
 
 
