@@ -112,6 +112,12 @@ async def on_ready():
 
 @client.event
 async def on_member_update(before, after):
+    before_stream = before.game and before.game.type == 1
+    after_stream = after.game and after.game.type == 1
+    change_in_streaming = before_stream != after_stream
+    if not change_in_streaming:
+        return
+
     response = await fetch("streaming_role", after.server.id)
     response = json.loads(response)
     streaming_role = response["streaming_role"]
