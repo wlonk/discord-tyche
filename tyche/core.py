@@ -34,7 +34,7 @@ AFFIRMATIVES = [
     "Aye aye.",
     "I'll try my best.",
     "UGH. Fine.",
-    "Yessiree!",
+    "You betcha!",
 ]
 
 
@@ -43,6 +43,9 @@ NEGATIVES = [
     "I can't do that, Dave.",
     "Nah.",
     "Pffff. No.",
+    "It is with the greatest regret that I inform you I cannot.",
+    "Nuh-uh.",
+    "ope nope nope nope nope nope nope nope nope nope nope nop",
 ]
 
 
