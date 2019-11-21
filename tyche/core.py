@@ -9,6 +9,7 @@ import aiohttp
 import discord
 from discord.ext.commands import Bot
 
+from .ytdl import create_ytdl_source
 from .errors import ParseError
 from .generic import Generic
 from .pbta import PbtA
@@ -33,8 +34,8 @@ AFFIRMATIVES = [
     "Sure thing.",
     "Aye aye.",
     "I'll try my best.",
-    "UGH. Fine.",
     "You betcha!",
+    "But of course.",
 ]
 
 
@@ -53,35 +54,36 @@ NEGATIVES = [
 VOICE_CHANNELS = {}
 
 
-async def fetch(url, server_id):
-    # async with AsyncExitStack() as stack:
-    #     session = await stack.enter_async_context(aiohttp.ClientSession())
-    #     response = await stack.enter_async_context(
-    #         session.get(url, params={"server_id": server_id})
-    #     )
+async def fetch(url, guild_id):
     headers = {
         "Authorization": f"Token {API_KEY}",
     }
     params = {
-        "server_id": server_id,
+        "server_id": guild_id,
     }
     full_url = f"{API_ROOT}{url}/"
+    # When we're 3.7:
+    # async with AsyncExitStack() as stack:
+    #     session = await stack.enter_async_context(aiohttp.ClientSession())
+    #     response = await stack.enter_async_context(
+    #         session.get(url, params={"guild_id": guild_id})
+    #     )
     async with aiohttp.ClientSession() as session:
         async with session.get(full_url, headers=headers, params=params) as response:
             return await response.text()
 
 
 async def get_prefix(bot, message):
-    payload = await fetch("prefix", message.server.id)
+    payload = await fetch("prefix", message.guild.id)
     return json.loads(payload)["prefix"]
 
 
 async def is_acceptable(role_name, context):
-    server_acceptable_roles = await fetch("roles", context.message.server.id)
+    guild_acceptable_roles = await fetch("roles", context.message.guild.id)
     acceptable_roles = [
         r
-        for r in context.message.server.role_hierarchy
-        if r.name in server_acceptable_roles
+        for r in context.message.guild.roles
+        if r.name in guild_acceptable_roles
     ]
     try:
         return next(r for r in acceptable_roles if r.name == role_name)
@@ -100,7 +102,7 @@ client = Bot(
 async def on_ready():
     print(
         f"Logged in as {client.user.name} (ID:{client.user.id}) | "
-        f"Connected to {str(len(client.servers))} servers"
+        f"Connected to {str(len(client.guilds))} guilds"
     )
     print(f"Communicating with {API_ROOT}")
     print("--------")
@@ -113,15 +115,20 @@ async def on_ready():
     )
 
 
+def _is_streaming(member):
+    return any(isinstance(act, discord.Streaming) for act in member.activities)
+
+
 @client.event
 async def on_member_update(before, after):
-    before_stream = before.game and before.game.type == 1
-    after_stream = after.game and after.game.type == 1
-    change_in_streaming = before_stream != after_stream
+    is_before_streaming = _is_streaming(before)
+    is_after_streaming = _is_streaming(after)
+    change_in_streaming = is_before_streaming != is_after_streaming
+
     if not change_in_streaming:
         return
 
-    response = await fetch("streaming_role", after.server.id)
+    response = await fetch("streaming_role", after.guild.id)
     response = json.loads(response)
     streaming_role = response["streaming_role"]
     streaming_role_requires = response["streaming_role_requires"]
@@ -129,14 +136,14 @@ async def on_member_update(before, after):
         avilable_roles = {
             r.name: r
             for r
-            in after.server.role_hierarchy
+            in after.guild.roles
         }
         streaming_role = avilable_roles.get(streaming_role, None)
         if not streaming_role:
             # Bail early if role missing:
             return
-        if (after.game and after.game.type != 1) or after.game is None:
-            await client.remove_roles(after, streaming_role)
+        if not _is_streaming(after):
+            await after.remove_roles(streaming_role)
         user_roles = [
             role.name
             for role
@@ -144,132 +151,132 @@ async def on_member_update(before, after):
         ]
         if streaming_role_requires and streaming_role_requires not in user_roles:
             return
-        if after.game and after.game.type == 1:
-            await client.add_roles(after, streaming_role)
+        if _is_streaming(after):
+            await after.add_roles(streaming_role)
 
 
-@client.command(pass_context=True)
+@client.command()
 async def play(ctx, url):
     """
     Play audio from the given YouTube URL in the current user's voice channel.
     """
-    await client.say(choice(AFFIRMATIVES))
-    channel = ctx.message.author.voice.voice_channel
+    await ctx.send(choice(AFFIRMATIVES))
+    channel = ctx.message.author.voice.channel
     if channel:
-        voice = await client.join_voice_channel(channel)
-        player = await voice.create_ytdl_player(url)
-        VOICE_CHANNELS[channel.id] = player
-        player.volume = 0.1
-        player.start()
+        voice = await channel.connect()
+        source = await create_ytdl_source(voice, url)
+        VOICE_CHANNELS[channel.id] = voice
+        voice.volume = 0.1
+        voice.play(source)
 
 
-@client.command(pass_context=True)
+@client.command()
 async def pause(ctx):
     """
     Pause playing audio in the current user's voice channel.
     """
-    channel = ctx.message.author.voice.voice_channel
+    channel = ctx.message.author.voice.channel
     if channel:
-        player = VOICE_CHANNELS.get(channel.id)
-        if player:
-            await client.say(choice(AFFIRMATIVES))
-            player.pause()
+        voice = VOICE_CHANNELS.get(channel.id)
+        if voice:
+            await ctx.send(choice(AFFIRMATIVES))
+            voice.pause()
         else:
-            await client.say(choice(NEGATIVES))
+            await ctx.send(choice(NEGATIVES))
 
 
-@client.command(pass_context=True)
+@client.command()
 async def resume(ctx):
     """
     Resume playing audio in the current user's voice channel.
     """
-    channel = ctx.message.author.voice.voice_channel
+    channel = ctx.message.author.voice.channel
     if channel:
-        player = VOICE_CHANNELS.get(channel.id)
-        if player:
-            await client.say(choice(AFFIRMATIVES))
-            player.resume()
+        voice = VOICE_CHANNELS.get(channel.id)
+        if voice:
+            await ctx.send(choice(AFFIRMATIVES))
+            voice.resume()
         else:
-            await client.say(choice(NEGATIVES))
+            await ctx.send(choice(NEGATIVES))
 
 
-@client.command(pass_context=True)
+@client.command()
 async def stop(ctx):
     """
     Stop playing audio in the current user's voice channel.
     """
-    channel = ctx.message.author.voice.voice_channel
+    channel = ctx.message.author.voice.channel
     if channel:
-        player = VOICE_CHANNELS.get(channel.id)
-        if player:
-            await client.say(choice(AFFIRMATIVES))
-            player.stop()
+        voice = VOICE_CHANNELS.get(channel.id)
+        if voice:
+            await ctx.send(choice(AFFIRMATIVES))
+            voice.stop()
         else:
-            await client.say(choice(NEGATIVES))
+            await ctx.send(choice(NEGATIVES))
 
 
-@client.command(pass_context=True)
+@client.command()
 async def vol(ctx, volume):
     """
     Adjust Tyche's volume in the current user's voice channel. Valid values are between
     0.0 and 2.0, inclusive.
     """
-    channel = ctx.message.author.voice.voice_channel
+    channel = ctx.message.author.voice.channel
     try:
         volume = float(volume)
     except ValueError:
-        await client.say("That's not a number.")
+        await ctx.send("That's not a number.")
         return
     if channel:
-        player = VOICE_CHANNELS.get(channel.id)
-        if player and 0.0 <= volume <= 2.0:
-            await client.say(choice(AFFIRMATIVES))
-            player.volume = volume
+        voice = VOICE_CHANNELS.get(channel.id)
+        if voice and 0.0 <= volume <= 2.0:
+            await ctx.send(choice(AFFIRMATIVES))
+            voice.volume = volume
         else:
-            await client.say(choice(NEGATIVES))
+            await ctx.send(choice(NEGATIVES))
 
 
-@client.command(pass_context=True)
+@client.command()
 async def leave(ctx):
     """
     Leave the current user's voice channel.
     """
-    channel = ctx.message.author.voice.voice_channel
+    channel = ctx.message.author.voice.channel
     if channel:
-        player = VOICE_CHANNELS.get(channel.id)
-        if player:
-            await client.voice.disconnect()
+        voice = VOICE_CHANNELS.get(channel.id)
+        if voice:
+            await voice.disconnect()
             VOICE_CHANNELS.pop(channel.id)
 
 
-@client.command(pass_context=True)
+@client.command()
 async def role(ctx, desired_role):
     """
     Add a cosmetic role to the current user.
     """
     role = await is_acceptable(desired_role, ctx)
     if role:
-        await client.say(choice(AFFIRMATIVES))
-        await client.add_roles(ctx.message.author, role)
+        await ctx.send(choice(AFFIRMATIVES))
+        await ctx.message.author.add_roles(role)
     else:
-        await client.say(choice(NEGATIVES))
+        await ctx.send(choice(NEGATIVES))
 
 
-@client.command(pass_context=True)
+@client.command()
 async def unrole(ctx, desired_role):
     """
     Remove a cosmetic role from the current user.
     """
     role = await is_acceptable(desired_role, ctx)
     if role:
-        await client.say(choice(AFFIRMATIVES))
-        await client.remove_roles(ctx.message.author, role)
+        await ctx.send(choice(AFFIRMATIVES))
+        await ctx.message.author.remove_roles(role)
     else:
-        await client.say(choice(NEGATIVES))
+        await ctx.send(choice(NEGATIVES))
 
 
 @client.command()
-async def roll(*dice):
+async def roll(ctx, *dice):
     """
     Roll dice.
 
@@ -282,7 +289,7 @@ async def roll(*dice):
         try:
             result = backend.roll(" ".join(dice))
             if result:
-                await client.say(result)
+                await ctx.send(result)
                 return
         except ParseError:
             pass
