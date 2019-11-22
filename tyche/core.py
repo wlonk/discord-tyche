@@ -156,6 +156,14 @@ async def on_member_update(before, after):
 
 
 @client.command()
+async def ping(ctx):
+    """
+    Respond with pong.
+    """
+    await ctx.send("pong")
+
+
+@client.command()
 async def play(ctx, url):
     """
     Play audio from the given YouTube URL in the current user's voice channel.
