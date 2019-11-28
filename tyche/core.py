@@ -257,19 +257,19 @@ async def leave(ctx):
             VOICE_CHANNELS.pop(channel.id)
 
 
-@client.command()
-async def list(ctx):
+@client.command(name="list-roles")
+async def list_roles(ctx):
     """
     List all cosmetic roles on the current server.
     """
-    guild_acceptable_roles = await fetch("roles", context.message.guild.id)
+    guild_acceptable_roles = await fetch("roles", ctx.message.guild.id)
     acceptable_roles = ", ".join([
-        r.name
-        for r in context.message.guild.roles
+        f"`{r.name}`"
+        for r in ctx.message.guild.roles
         if r.name in guild_acceptable_roles
     ])
     message = f"I can add or remove these roles from you: {acceptable_roles}"
-    await ctx.send(choice(AFFIRMATIVES))
+    await ctx.send(message)
 
 
 @client.command()
