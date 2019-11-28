@@ -258,6 +258,21 @@ async def leave(ctx):
 
 
 @client.command()
+async def roles(ctx):
+    """
+    List all cosmetic roles on the current server.
+    """
+    guild_acceptable_roles = await fetch("roles", context.message.guild.id)
+    acceptable_roles = ", ".join([
+        r.name
+        for r in context.message.guild.roles
+        if r.name in guild_acceptable_roles
+    ])
+    message = f"I can add or remove these roles from you: {acceptable_roles}"
+    await ctx.send(choice(AFFIRMATIVES))
+
+
+@client.command()
 async def role(ctx, desired_role):
     """
     Add a cosmetic role to the current user.
