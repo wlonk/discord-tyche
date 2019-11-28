@@ -263,11 +263,11 @@ async def list_roles(ctx):
     List all cosmetic roles on the current server.
     """
     guild_acceptable_roles = await fetch("roles", ctx.message.guild.id)
-    acceptable_roles = ", ".join([
+    acceptable_roles = ", ".join(sorted(
         f"`{r.name}`"
         for r in ctx.message.guild.roles
         if r.name in guild_acceptable_roles
-    ])
+    ))
     message = f"I can add or remove these roles from you: {acceptable_roles}"
     await ctx.send(message)
 
