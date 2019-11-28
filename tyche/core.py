@@ -258,7 +258,7 @@ async def leave(ctx):
 
 
 @client.command()
-async def roles(ctx):
+async def list(ctx):
     """
     List all cosmetic roles on the current server.
     """
