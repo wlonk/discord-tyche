@@ -389,6 +389,7 @@ class Admin(Cog):
                 if not message.pinned:
                     print(f"Deleting message {message.id}")
                     await message.delete()
+                    await asyncio.sleep(2)
 
 
 client.add_cog(Music(client))
