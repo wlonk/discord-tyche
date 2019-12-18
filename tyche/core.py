@@ -1,3 +1,4 @@
+import typing
 import asyncio
 import json
 import os
@@ -7,7 +8,7 @@ from random import choice
 
 import aiohttp
 import discord
-from discord.ext.commands import Bot
+from discord.ext.commands import Bot, Cog, command
 
 from .ytdl import create_ytdl_source
 from .errors import ParseError
@@ -93,9 +94,7 @@ async def is_acceptable(role_name, context):
 
 # Ready Bot One!
 
-client = Bot(
-    description="Tyche, the diceroller", command_prefix=get_prefix, pm_help=True
-)
+client = Bot(description="Tyche, the diceroller", command_prefix=get_prefix)
 
 
 @client.event
@@ -121,6 +120,18 @@ def _is_streaming(member):
 
 @client.event
 async def on_member_update(before, after):
+    """
+    This does a few things:
+        1. Detects if there's a change in streaming status. If not, it
+           bails.
+        2. Detects if the server has a streaming role configured. If
+           not, it bails.
+        3. If the user has begun streaming, it applies the streaming
+           role to them (only if they have the prerequisite role, if any
+           such is configured).
+        4. If the user has ceased streaming, it removes the streaming
+           role from them.
+    """
     is_before_streaming = _is_streaming(before)
     is_after_streaming = _is_streaming(after)
     change_in_streaming = is_before_streaming != is_after_streaming
@@ -130,15 +141,15 @@ async def on_member_update(before, after):
 
     response = await fetch("streaming_role", after.guild.id)
     response = json.loads(response)
-    streaming_role = response["streaming_role"]
+    streaming_role_name = response["streaming_role"]
     streaming_role_requires = response["streaming_role_requires"]
-    if streaming_role:
+    if streaming_role_name:
         avilable_roles = {
             r.name: r
             for r
             in after.guild.roles
         }
-        streaming_role = avilable_roles.get(streaming_role, None)
+        streaming_role = avilable_roles.get(streaming_role_name, None)
         if not streaming_role:
             # Bail early if role missing:
             return
@@ -163,159 +174,228 @@ async def ping(ctx):
     await ctx.send("pong")
 
 
-@client.command()
-async def play(ctx, url):
-    """
-    Play audio from the given YouTube URL in the current user's voice channel.
-    """
-    await ctx.send(choice(AFFIRMATIVES))
-    channel = ctx.message.author.voice.channel
-    if channel:
-        voice = await channel.connect()
-        source = await create_ytdl_source(voice, url)
-        VOICE_CHANNELS[channel.id] = voice
-        voice.volume = 0.1
-        voice.play(source)
-
-
-@client.command()
-async def pause(ctx):
-    """
-    Pause playing audio in the current user's voice channel.
-    """
-    channel = ctx.message.author.voice.channel
-    if channel:
-        voice = VOICE_CHANNELS.get(channel.id)
-        if voice:
-            await ctx.send(choice(AFFIRMATIVES))
-            voice.pause()
-        else:
-            await ctx.send(choice(NEGATIVES))
-
-
-@client.command()
-async def resume(ctx):
-    """
-    Resume playing audio in the current user's voice channel.
-    """
-    channel = ctx.message.author.voice.channel
-    if channel:
-        voice = VOICE_CHANNELS.get(channel.id)
-        if voice:
-            await ctx.send(choice(AFFIRMATIVES))
-            voice.resume()
-        else:
-            await ctx.send(choice(NEGATIVES))
-
-
-@client.command()
-async def stop(ctx):
-    """
-    Stop playing audio in the current user's voice channel.
-    """
-    channel = ctx.message.author.voice.channel
-    if channel:
-        voice = VOICE_CHANNELS.get(channel.id)
-        if voice:
-            await ctx.send(choice(AFFIRMATIVES))
-            voice.stop()
-        else:
-            await ctx.send(choice(NEGATIVES))
-
-
-@client.command()
-async def vol(ctx, volume):
-    """
-    Adjust Tyche's volume in the current user's voice channel. Valid values are between
-    0.0 and 2.0, inclusive.
-    """
-    channel = ctx.message.author.voice.channel
-    try:
-        volume = float(volume)
-    except ValueError:
-        await ctx.send("That's not a number.")
-        return
-    if channel:
-        voice = VOICE_CHANNELS.get(channel.id)
-        if voice and 0.0 <= volume <= 2.0:
-            await ctx.send(choice(AFFIRMATIVES))
-            voice.volume = volume
-        else:
-            await ctx.send(choice(NEGATIVES))
-
-
-@client.command()
-async def leave(ctx):
-    """
-    Leave the current user's voice channel.
-    """
-    channel = ctx.message.author.voice.channel
-    if channel:
-        voice = VOICE_CHANNELS.get(channel.id)
-        if voice:
-            await voice.disconnect()
-            VOICE_CHANNELS.pop(channel.id)
-
-
-@client.command(name="list-roles")
-async def list_roles(ctx):
-    """
-    List all cosmetic roles on the current server.
-    """
-    guild_acceptable_roles = await fetch("roles", ctx.message.guild.id)
-    acceptable_roles = ", ".join(sorted(
-        f"`{r.name}`"
-        for r in ctx.message.guild.roles
-        if r.name in guild_acceptable_roles
-    ))
-    message = f"I can add or remove these roles from you: {acceptable_roles}"
-    await ctx.send(message)
-
-
-@client.command()
-async def role(ctx, desired_role):
-    """
-    Add a cosmetic role to the current user.
-    """
-    role = await is_acceptable(desired_role, ctx)
-    if role:
+class Music(Cog):
+    @command()
+    async def play(self, ctx, url):
+        """
+        Play audio from YouTube.
+        """
         await ctx.send(choice(AFFIRMATIVES))
-        await ctx.message.author.add_roles(role)
-    else:
-        await ctx.send(choice(NEGATIVES))
+        channel = ctx.message.author.voice.channel
+        if channel:
+            voice = await channel.connect()
+            source = await create_ytdl_source(voice, url)
+            VOICE_CHANNELS[channel.id] = voice, source
+            source.volume = 0.1
+            voice.play(source)
+
+    @command()
+    async def pause(self, ctx):
+        """
+        Pause playing audio.
+        """
+        channel = ctx.message.author.voice.channel
+        if channel:
+            voice, _ = VOICE_CHANNELS.get(channel.id)
+            if voice:
+                await ctx.send(choice(AFFIRMATIVES))
+                voice.pause()
+            else:
+                await ctx.send(choice(NEGATIVES))
+
+    @command()
+    async def resume(self, ctx):
+        """
+        Resume playing audio.
+        """
+        channel = ctx.message.author.voice.channel
+        if channel:
+            voice, _ = VOICE_CHANNELS.get(channel.id)
+            if voice:
+                await ctx.send(choice(AFFIRMATIVES))
+                voice.resume()
+            else:
+                await ctx.send(choice(NEGATIVES))
+
+    @command()
+    async def stop(self, ctx):
+        """
+        Stop playing audio.
+        """
+        channel = ctx.message.author.voice.channel
+        if channel:
+            voice, _ = VOICE_CHANNELS.get(channel.id)
+            if voice:
+                await ctx.send(choice(AFFIRMATIVES))
+                voice.stop()
+            else:
+                await ctx.send(choice(NEGATIVES))
+
+    @command()
+    async def vol(self, ctx, volume: typing.Optional[float]):
+        """
+        Adjust Tyche's volume.
+
+        Valid values are between 0.0 and 2.0, inclusive.
+        """
+        channel = ctx.message.author.voice.channel
+        if channel:
+            _, source = VOICE_CHANNELS.get(channel.id)
+            if source and volume is not None and 0.0 <= volume <= 2.0:
+                await ctx.send(choice(AFFIRMATIVES))
+                source.volume = volume
+            elif source:
+                await ctx.send(f"Currently playing at {source.volume}.")
+            else:
+                await ctx.send(choice(NEGATIVES))
+
+    @command()
+    async def leave(self, ctx):
+        """
+        Leave the current user's voice channel.
+        """
+        channel = ctx.message.author.voice.channel
+        if channel:
+            voice, _ = VOICE_CHANNELS.get(channel.id)
+            if voice:
+                await voice.disconnect()
+                VOICE_CHANNELS.pop(channel.id)
 
 
-@client.command()
-async def unrole(ctx, desired_role):
-    """
-    Remove a cosmetic role from the current user.
-    """
-    role = await is_acceptable(desired_role, ctx)
-    if role:
-        await ctx.send(choice(AFFIRMATIVES))
-        await ctx.message.author.remove_roles(role)
-    else:
-        await ctx.send(choice(NEGATIVES))
+class Roles(Cog):
+    @command()
+    async def list(self, ctx):
+        """
+        List all cosmetic roles on the current server.
+        """
+        guild_acceptable_roles = await fetch("roles", ctx.message.guild.id)
+        acceptable_roles = ", ".join(sorted(
+            f"`{r.name}`"
+            for r in ctx.message.guild.roles
+            if r.name in guild_acceptable_roles
+        ))
+        message = f"I can add or remove these roles from you: {acceptable_roles}"
+        await ctx.send(message)
+
+    @command()
+    async def role(self, ctx, desired_role):
+        """
+        Add a cosmetic role to the current user.
+        """
+        role = await is_acceptable(desired_role, ctx)
+        if role:
+            await ctx.send(choice(AFFIRMATIVES))
+            await ctx.message.author.add_roles(role)
+        else:
+            await ctx.send(choice(NEGATIVES))
+
+    @command()
+    async def unrole(self, ctx, desired_role):
+        """
+        Remove a cosmetic role from the current user.
+        """
+        role = await is_acceptable(desired_role, ctx)
+        if role:
+            await ctx.send(choice(AFFIRMATIVES))
+            await ctx.message.author.remove_roles(role)
+        else:
+            await ctx.send(choice(NEGATIVES))
 
 
-@client.command()
-async def roll(ctx, *dice):
-    """
-    Roll dice.
+class Rolls(Cog):
+    @command()
+    async def roll(self, ctx, *dice):
+        """
+        Roll dice.
 
-    XdY(+/-Z)  generic dice roller
-    X(eY)(r)   Chronicles of Darkness roller
-    +/-X       Powered by the Apocalypse roller
-    """
-    result = ""
-    for backend in BACKENDS:
-        try:
-            result = backend.roll(" ".join(dice))
-            if result:
-                await ctx.send(result)
-                return
-        except ParseError:
-            pass
+        XdY(+/-Z)  generic dice roller
+        X(eY)(r)   Chronicles of Darkness roller
+        +/-X       Powered by the Apocalypse roller
+        """
+        result = ""
+        for backend in BACKENDS:
+            try:
+                result = backend.roll(" ".join(dice))
+                if result:
+                    await ctx.send(result)
+                    return
+            except ParseError:
+                pass
+
+
+def _format_lfc_message(obj):
+    header = "**Currently looking for crew:**"
+    message = '\n'.join(
+        "{username} looking for {number} {activity}".format(
+            username=msg["username"],
+            number=msg["number"],
+            activity=msg["activity"],
+        )
+        for msg
+        in obj
+    ) or "No one looking for crew."
+    return f">>> {header}\n{message}"
+
+
+# TODO: Store this in Redis
+LFCS = []
+
+class LookingForCrew(Cog):
+    @command()
+    async def looking(self, ctx, number, *activity):
+        """
+        Temporary command for testing.
+        """
+        # Create lfc JSON object
+        obj = {
+            "username": ctx.message.author.name,
+            "number": number,
+            "activity": " ".join(activity),
+        }
+        # Put it in Redis
+        LFCS.append(obj)
+        # Print whole lfc list to lfc channel (gotten from API)
+        await ctx.send(_format_lfc_message(LFCS))
+
+    @command()
+    async def done(self, ctx, *args):
+        """
+        Temporary command for testing.
+        """
+        # Remove lfc object from Redis
+        global LFCS
+        LFCS = [
+            lfc
+            for lfc
+            in LFCS
+            if lfc["username"] != ctx.message.author.name
+        ]
+        # Print whole lfc list to lfc channel (gotten from API)
+        await ctx.send(_format_lfc_message(LFCS))
+
+
+# TODO: On Redis timeout:
+# Print whole lfc list to lfc channel (gotten from API)
+
+
+class Admin(Cog):
+    def _is_admin(self, member, channel):
+        return member.permissions_in(channel).administrator
+
+    @command(hidden=True)
+    async def clear(self, ctx):
+        if self._is_admin(ctx.author, ctx.channel):
+            async for message in ctx.channel.history(oldest_first=False):
+                if not message.pinned:
+                    print(f"Deleting message {message.id}")
+                    await message.delete()
+
+
+client.add_cog(Music(client))
+client.add_cog(Roles(client))
+client.add_cog(Rolls(client))
+client.add_cog(LookingForCrew(client))
+client.add_cog(Admin(client))
 
 
 def run():

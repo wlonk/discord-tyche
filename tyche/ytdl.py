@@ -93,7 +93,6 @@ async def create_ytdl_source(voice, url, *, ytdl_options=None, **kwargs):
         print("Cannot enable volume, source is Opus")
     else:
         # Wrap in volume-adjuster:
-        # TODO: this doesn't seem to work?
         source = discord.PCMVolumeTransformer(source)
 
     # set the dynamic attributes from the info extraction
