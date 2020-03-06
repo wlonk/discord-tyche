@@ -37,12 +37,11 @@ Music
 Development
 -----------
 
-Clone the repo, set up a virtualenv, install ``requirements.txt``.
+Local dev uses Docker.
 
-You'll also need `libopus`_, which you can get on OS X easily: ``brew
-install opus``.
+Clone the repo, and run ``make`` to build the docker image.
 
-You'll also need a Discord bot token. I leave that as an exercise to the
-reader.
-
-.. _libopus: https://opus-codec.org/downloads/
+Run ``make run`` to run the bot, and ``make shell`` to get a shell
+inside the docker container. You may need to get some environment
+variables and put them in ``.env``. If you are a Transneptunian, you can
+get these from the Keybase team directory.
