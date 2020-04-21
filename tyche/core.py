@@ -8,6 +8,7 @@ from random import choice
 
 import aiohttp
 import discord
+from discord import Embed, Colour
 from discord.ext.commands import Bot, Cog, command
 
 from .ytdl import create_ytdl_source
@@ -389,6 +390,31 @@ class Admin(Cog):
                     print(f"Deleting message {message.id}")
                     await message.delete()
                     await asyncio.sleep(2)
+
+    @command(hidden=True)
+    async def rules(self, ctx):
+        agree_emoji = "\N{THUMBS UP SIGN}"
+        embed = Embed.from_dict({
+            "color": Colour.blurple().value,
+            "title": "The Rules",
+            "description": f"Pleae agree to them with a {agree_emoji}."
+        })
+        message = await ctx.channel.send(content=None, embed=embed)
+        await message.add_reaction(agree_emoji)
+        @client.event
+        async def on_reaction_add(reaction, user):
+            right_message = reaction.message.id == message.id
+            right_emoji = str(reaction.emoji) == agree_emoji
+            not_myself = user != client.user
+            if right_message and right_emoji and not_myself:
+                await ctx.channel.send("Cool, glad you agree!")
+        @client.event
+        async def on_reaction_remove(reaction, user):
+            right_message = reaction.message.id == message.id
+            right_emoji = str(reaction.emoji) == agree_emoji
+            not_myself = user != client.user
+            if right_message and right_emoji and not_myself:
+                await ctx.channel.send("You can always revoke consent, I understand.")
 
 
 client.add_cog(Music(client))
