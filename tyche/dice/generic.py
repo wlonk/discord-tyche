@@ -1,7 +1,7 @@
 import re
 
-from .base import Base, Roll
-from .errors import ParseError
+from ..base import Base, Roll
+from ..errors import ParseError
 
 
 class Generic(Base):

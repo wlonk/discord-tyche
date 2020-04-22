@@ -2,8 +2,8 @@ import re
 from random import randint
 from collections import namedtuple
 
-from .base import Base
-from .errors import ParseError
+from ..base import Base
+from ..errors import ParseError
 
 
 Roll = namedtuple('Roll', ('number', 'sides', 'explode_at', 'is_rote'))
