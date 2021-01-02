@@ -63,6 +63,9 @@ class Admin(Cog):
         with rules.open() as f:
             parsed_message = safe_load(f.read()[len("rules\n"):])
 
+        if not parsed_message:
+            print("No rules at {rules}!")
+            return
         guild = utils.find(
             lambda x: parsed_message.get("guild", None) == x.id,
             self.client.guilds
