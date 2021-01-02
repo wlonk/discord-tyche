@@ -59,7 +59,8 @@ class Admin(Cog):
 
     @command(hidden=True)
     async def rules(self, ctx):
-        with open("transneptune-rules.yml") as f:
+        rules = Path(__file__).parent / "../../transneptune-rules.yml"
+        with rules.open() as f:
             parsed_message = safe_load(f.read()[len("rules\n"):])
 
         guild = utils.find(
