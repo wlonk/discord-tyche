@@ -1,5 +1,6 @@
 import asyncio
 from collections import defaultdict
+from pathlib import Path
 from discord import Embed, Colour, utils
 from discord.ext.commands import Cog, command
 from emoji import emojize
