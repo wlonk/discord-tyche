@@ -15,7 +15,7 @@ MESSAGE_CACHE = {}
 
 
 rules = Path(__file__).parent / "../../transneptune-rules.yml"
-print(" ----> {rules}")
+print(f" ----> {rules}")
 
 
 class Admin(Cog):
@@ -69,7 +69,7 @@ class Admin(Cog):
             parsed_message = safe_load(f.read()[len("rules\n"):])
 
         if not parsed_message:
-            print("No rules at {rules}!")
+            print(f"No rules at {rules}!")
             return
         guild = utils.find(
             lambda x: parsed_message.get("guild", None) == x.id,
