@@ -14,6 +14,10 @@ e = lambda s: emojize(s, use_aliases=True)
 MESSAGE_CACHE = {}
 
 
+rules = Path(__file__).parent / "../../transneptune-rules.yml"
+print(" ----> {rules}")
+
+
 class Admin(Cog):
     def __init__(self, client):
         self.client = client
