@@ -59,7 +59,8 @@ class Admin(Cog):
 
     @command(hidden=True)
     async def rules(self, ctx):
-        parsed_message = safe_load(ctx.message.content[len("rules\n"):])
+        with open("transneptune-rules.yml") as f:
+            parsed_message = safe_load(f.read()[len("rules\n"):])
 
         guild = utils.find(
             lambda x: parsed_message.get("guild", None) == x.id,
@@ -102,7 +103,7 @@ class Admin(Cog):
             if not guild:
                 print("Missing guild")
                 return
-            user = guild.get_member(payload.user_id)
+            user = await guild.fetch_member(payload.user_id)
             if not user:
                 print("Missing user")
                 return
@@ -122,7 +123,7 @@ class Admin(Cog):
             if not guild:
                 print("Missing guild")
                 return
-            user = guild.get_member(payload.user_id)
+            user = await guild.fetch_member(payload.user_id)
             if not user:
                 print("Missing user")
                 return
