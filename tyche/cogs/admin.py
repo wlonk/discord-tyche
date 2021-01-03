@@ -14,10 +14,6 @@ e = lambda s: emojize(s, use_aliases=True)
 MESSAGE_CACHE = {}
 
 
-rules = Path(__file__).parent / "../../transneptune-rules.yml"
-print(f" ----> {rules}")
-
-
 class Admin(Cog):
     def __init__(self, client):
         self.client = client
@@ -64,7 +60,7 @@ class Admin(Cog):
 
     @command(hidden=True)
     async def rules(self, ctx):
-        rules = Path(__file__).parent / "../../transneptune-rules.yml"
+        rules = (Path(__file__).parent / "../../transneptune-rules.yml").resolve()
         with rules.open() as f:
             parsed_message = safe_load(f.read()[len("rules\n"):])
 
